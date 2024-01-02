@@ -522,8 +522,8 @@ export const Calendar = () => {
     <div className="flex flex-row w-100 justify-end">
       <div className={classNames("p-2 m-3", {'hidden' : !accessToken && !expiresIn})}>
         <button onClick={getStats} className="bg-violet-500 p-2 m-3 rounded">Get Room Stats</button>
-        <input value={statsControl.startTime} onChange={handleStatsStart} type="date" className="m-3 text-black" />
-        <input value={statsControl.endTime} onChange={handleStatsEnd} type="date" className="m-3 text-black" />
+        <input value={statsControl.startTime} onChange={handleStatsStart} onFocus={closeStats} type="date" className="m-3 text-black" />
+        <input value={statsControl.endTime} onChange={handleStatsEnd} onFocus={closeStats} type="date" className="m-3 text-black" />
       </div>
       <div className="p-2 m-3">
       <button
