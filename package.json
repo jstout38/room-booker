@@ -12,6 +12,7 @@
     "gapi-script": "^1.2.0",
     "google-auth-library": "^9.4.1",
     "googleapis": "^105.0.0",
+    "moment": "^2.30.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-scripts": "5.0.1",

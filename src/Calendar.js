@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import classNames from 'classnames';
+import moment from 'moment';
 
 
 export const Calendar = () => {
@@ -13,6 +14,7 @@ export const Calendar = () => {
   const SCOPES = "https://www.googleapis.com/auth/calendar";
   const [ accessToken, setAccessToken ]  = useState(window.localStorage.getItem("access_token"));
   const [ expiresIn, setExpiresIn ] = useState(window.localStorage.getItem("expires_in")); 
+  const [ expiresAt, setExpiresAt ] = useState();
 
   const RoomIDs = {
     "Local History Room": '3ecf0ad6f68abeaec4d12dc940ccfdcee973d96406adae96598d147dbf1930c3@group.calendar.google.com',
@@ -123,6 +125,7 @@ export const Calendar = () => {
         throw resp;
       }
       const { access_token, expires_in } = gapi.client.getToken();
+      setExpiresAt(moment(new Date()).add(expires_in, 's'));
       window.localStorage.setItem("access_token", access_token);
       window.localStorage.setItem("expires_in", expires_in);
       setAccessToken(access_token);
@@ -170,7 +173,6 @@ export const Calendar = () => {
   }
   
   async function listUpcomingEvents(id) {    
-    
     var today = new Date().toLocaleString();
     today = `${today_year}-${today_month}-${today_day}T00:00:00.000-05:00`;
     let response;
@@ -185,8 +187,7 @@ export const Calendar = () => {
       response = await gapi.client.calendar.events.list(request);
     } catch (err) {
       //document.getElementById("content").innerText = err.message;
-      tokenClient.requestAccessToken();
-      return;
+      handleSignoutClick();
     }
     const events = response.result.items;
     if (!events || events.length === 0) {
@@ -230,8 +231,7 @@ export const Calendar = () => {
       response = await gapi.client.calendar.events.list(request);
     } catch (err) {
       //document.getElementById("content").innerText = err.message;
-      tokenClient.requestAccessToken();
-      return;
+      handleSignoutClick();
     }
     const events = response.result.items;
     if (!events || events.length === 0) {
@@ -286,8 +286,7 @@ export const Calendar = () => {
         console.log(event);
       },
         (error) => {
-          tokenClient.requestAccessToken();
-          console.error(error);
+          handleSignoutClick();
       }
     )
     setShowModal(false);
@@ -315,7 +314,9 @@ export const Calendar = () => {
 
     currentTime = currentTime.slice(0,5);
     var twoHourTime = (Number(currentTime.slice(0,2)) + 2).toString() + currentTime.slice(2,5);
-    console.log(twoHourTime);
+    if (twoHourTime.length ===  4) {
+      twoHourTime = "0" + twoHourTime;
+    }
 
     if (new Date().getDay() >= 5) {
       if (Number(twoHourTime.slice(0,2)) >= 18) {
