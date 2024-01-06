@@ -59,6 +59,10 @@ export const Calendar = () => {
   const [ showModal, setShowModal ] = useState(false);
 
   const [ showStatsModal, setShowStatsModal ] = useState(false);
+
+  const [ showEditModal, setShowEditModal ] = useState(false);
+
+  const [ editId, setEditId ] = useState("");
   
   const [ currentRoom, setCurrentRoom ] = useState('Art Room');
 
@@ -171,6 +175,79 @@ export const Calendar = () => {
     var min = dateString.slice(14,16);
     return `${hour}:${min} ${amPm}`;
   }
+
+  async function handleEdit(roomId, eventId) {
+    let response;
+    try {
+      const request = {
+        calendarId: RoomIDs[roomId],
+        eventId: eventId,
+      };
+      response = await gapi.client.calendar.events.get(request);
+    } catch (err) {
+      //document.getElementById("content").innerText = err.message;
+      handleSignoutClick();
+    }
+    console.log(response);
+    setInputControl({
+      startTime: response.result.start.dateTime.slice(11, 16),
+      endTime: response.result.end.dateTime.slice(11,16),
+      name: response.result.summary ? response.result.summary : "",
+      number_of_people: response.result.extendedProperties.private.number_of_people,
+      notes: response.result.description ? response.result.description : "",
+    })
+    setCurrentRoom(roomId);
+    setEditId(response.result);
+    setShowEditModal(true);
+  }
+
+  async function sendEdit() {
+    console.log(inputControl);
+    var todaysDate = new Date();
+    var startTime = `${todaysDate.getFullYear()}-${todaysDate.getMonth() + 1}-${todaysDate.getDate()}T${inputControl.startTime}:00.000`;
+    var endTime = `${todaysDate.getFullYear()}-${todaysDate.getMonth() + 1}-${todaysDate.getDate()}T${inputControl.endTime}:00.000`;
+    var event = {
+        ...editId,
+        summary: inputControl.name,
+        description: inputControl.notes,
+        start: {
+          dateTime: startTime,
+          timeZone: "America/New_York",
+        },
+        end: {
+          dateTime: endTime,
+          timeZone: "America/New_York",
+        },
+        extendedProperties: {
+          "private": {
+            number_of_people: inputControl.number_of_people,
+          }
+        }
+    };
+    var request = gapi.client.calendar.events.patch({
+      resource: event,
+      calendarId: RoomIDs[currentRoom],
+      eventId: editId.id,
+    });
+    request.execute(
+      async (event) => {
+        var newEvents = {};
+        for (var key of Object.keys(RoomIDs)) {
+          var events = await listUpcomingEvents(key);
+          newEvents[key] = events;        
+        }
+        setCurrentEvents(newEvents);
+      },
+        (error) => {
+          handleSignoutClick();
+      }
+    )
+    setShowEditModal(false);
+
+      
+    
+}
+
   
   async function listUpcomingEvents(id) {    
     var today = new Date().toLocaleString();
@@ -194,25 +271,36 @@ export const Calendar = () => {
       //document.getElementById("content").innerText = "No events found.";
       return;
     }
+
     // Flatten to string to display
     const output = await events.map((event) => {
       if (!event.summary) {
         return <div key={event.id}>No title</div>
       }
-      return <div className="bg-blue-600 mt-5 ml-2 mr-2 p-2 rounded" key={event.id}>
-        <div>
-          {event.summary}
+      return (
+      <div className="bg-blue-600 mt-5 ml-2 mr-2 p-2 rounded grid grid-rows-1 grid-cols-8" key={event.id}>
+        <div className="col-span-8 row-start-1 col-start-1">
+          <div>
+            {event.summary}
+          </div>
+          <div>
+            {parseDateTime(event.start.dateTime)} - {parseDateTime(event.end.dateTime)}
+          </div>
+          <div>
+            {event.extendedProperties ? "Headcount: " + event.extendedProperties["private"].number_of_people : ""}
+          </div>
+          <div>
+            {event.description ? "Notes: " + event.description : ""}
+          </div>
         </div>
-        <div>
-          {parseDateTime(event.start.dateTime)} - {parseDateTime(event.end.dateTime)}
-        </div>
-        <div>
-          {event.extendedProperties ? "Headcount: " + event.extendedProperties["private"].number_of_people : ""}
-        </div>
-        <div>
-          {event.description ? "Notes: " + event.description : ""}
+        <div className="col-span-1 row-start-1 col-start-8">
+        <svg onClick={() => handleEdit(id, event.id)} className="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="white" viewBox="0 0 20 18">
+          <path d="M12.687 14.408a3.01 3.01 0 0 1-1.533.821l-3.566.713a3 3 0 0 1-3.53-3.53l.713-3.566a3.01 3.01 0 0 1 .821-1.533L10.905 2H2.167A2.169 2.169 0 0 0 0 4.167v11.666A2.169 2.169 0 0 0 2.167 18h11.666A2.169 2.169 0 0 0 16 15.833V11.1l-3.313 3.308Zm5.53-9.065.546-.546a2.518 2.518 0 0 0 0-3.56 2.576 2.576 0 0 0-3.559 0l-.547.547 3.56 3.56Z"/>
+          <path d="M13.243 3.2 7.359 9.081a.5.5 0 0 0-.136.256L6.51 12.9a.5.5 0 0 0 .59.59l3.566-.713a.5.5 0 0 0 .255-.136L16.8 6.757 13.243 3.2Z"/>
+        </svg>
         </div>
       </div>
+      )
     });
     return output;
   } 
@@ -282,8 +370,13 @@ export const Calendar = () => {
       sendUpdates: "all",
     });
     request.execute(
-      (event) => {
-        console.log(event);
+      async (event) => {
+        var newEvents = {};
+        for (var key of Object.keys(RoomIDs)) {
+          var events = await listUpcomingEvents(key);
+          newEvents[key] = events;        
+        }
+        setCurrentEvents(newEvents);
       },
         (error) => {
           handleSignoutClick();
@@ -291,12 +384,7 @@ export const Calendar = () => {
     )
     setShowModal(false);
 
-      var newEvents = {};
-      for (var key of Object.keys(RoomIDs)) {
-        var events = await listUpcomingEvents(key);
-        newEvents[key] = events;        
-      }
-      setCurrentEvents(newEvents);
+      
     
 }
 
@@ -515,6 +603,74 @@ export const Calendar = () => {
             <div className="flex items-center p-4 md:p-5 border-t border-gray-200 rounded-b dark:border-gray-600">
                 
                 <button onClick={closeStats} type="button" className="ms-3 text-gray-500 bg-white hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg border border-gray-200 text-sm font-medium px-5 py-2.5 hover:text-gray-900 focus:z-10 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-500 dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-gray-600">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div 
+  id="edit-modal" 
+  tabIndex="-1" 
+  aria-hidden="true" 
+  className=
+  {classNames('overflow-y-auto overflow-x-hidden absolute top-1/4 left-1/3 w-1/2 z-50 justify-center items-center max-h-full',
+  {'hidden' : !showEditModal})}
+>
+    <div className="relative p-4 w-full max-w-2xl max-h-full">
+        <div className="relative bg-white rounded-lg shadow dark:bg-gray-700">
+            <div className="flex items-center justify-between p-4 md:p-5 border-b rounded-t dark:border-gray-600">
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                    Edit Event for {currentRoom}
+                </h3>
+                <button type="button" className="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center dark:hover:bg-gray-600 dark:hover:text-white" onClick={() => setShowEditModal(false)}>
+                    <svg className="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
+                        <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
+                    </svg>
+                    <span className="sr-only">Close modal</span>
+                </button>
+            </div>
+            <div className="p-4 bg-red-700 grid grid-cols-4">
+                <div>
+                  <label>Start Time</label>
+                </div>
+                <div>
+                  <input type='time' value={inputControl.startTime} onChange={handleStart} className='rounded p-1 text-black' id="startTime"/>                  
+                </div>
+                <div>
+                  <label>End Time</label>
+                </div>
+                <div>
+                  <input type='time' value={inputControl.endTime} onChange={handleEnd} className='rounded p-1 text-black' id="endTime"/>                  
+                </div>
+                <div className='mt-5'>
+                  <label>Name</label>
+                </div>
+                <div className="mt-5 col-span-3">
+                  <input type='text' value={inputControl.name} onChange={handleName} className='p-1 text-black rounded' id='name'/>
+                </div>
+                <div className='mt-5'>
+                  <label>Number of people</label>
+                </div>
+                <div className="mt-5 col-span-3">
+                  <input type='number' value={inputControl.number_of_people} onChange={handleNumber} className='rounded p-1 text-black w-20' id='number'/>
+                </div>
+                <div className='mt-5'>
+                  <label>Notes</label>
+                </div>
+                <div className="mt-5 col-span-3">
+                  <textarea value={inputControl.notes} onChange={handleNotes} className='p-1 text-black rounded w-80 align-text-top ' id='notes'/>
+                </div>
+            </div>
+            
+            <div className="flex items-center p-4 md:p-5 border-t border-gray-200 rounded-b dark:border-gray-600">
+                <button 
+                  onClick={sendEdit} 
+                  disabled={inputControl.name.length === 0 || (((Number(inputControl.startTime.slice(0,2))) > Number(inputControl.endTime.slice(0,2))) || (Number(inputControl.startTime.slice(0,2)) >= Number(inputControl.endTime.slice(0,2)) && (Number(inputControl.startTime.slice(3,5)) > Number(inputControl.endTime.slice(3,5)))))} 
+                  data-modal-hide="default-modal" 
+                  type="button" 
+                  className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 disabled:opacity-25">
+                    Edit
+                  </button>
+                <button onClick={() => setShowEditModal(false)} type="button" className="ms-3 text-gray-500 bg-white hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg border border-gray-200 text-sm font-medium px-5 py-2.5 hover:text-gray-900 focus:z-10 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-500 dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-gray-600">Cancel</button>
             </div>
         </div>
     </div>
