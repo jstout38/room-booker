@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import classNames from 'classnames';
 import moment from 'moment';
+import DeleteModal from './DeleteModal';
+import EditModal from './EditModal';
 
 
 export const Calendar = () => {
@@ -643,177 +645,72 @@ function confirmDelete(roomId, id) {
         </div>
     </div>
 </div>
-<div 
-  id="edit-modal" 
-  tabIndex="-1" 
-  aria-hidden="true" 
-  className=
-  {classNames('overflow-y-auto overflow-x-hidden absolute top-1/4 left-1/3 w-1/2 z-50 justify-center items-center max-h-full',
-  {'hidden' : !showEditModal})}
->
-    <div className="relative p-4 w-full max-w-2xl max-h-full">
-        <div className="relative bg-white rounded-lg shadow dark:bg-gray-700">
-            <div className="flex items-center justify-between p-4 md:p-5 border-b rounded-t dark:border-gray-600">
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-                    Edit Event for {currentRoom}
-                </h3>
-                <button type="button" className="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center dark:hover:bg-gray-600 dark:hover:text-white" onClick={() => setShowEditModal(false)}>
-                    <svg className="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
-                        <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
-                    </svg>
-                    <span className="sr-only">Close modal</span>
-                </button>
-            </div>
-            <div className="p-4 bg-red-700 grid grid-cols-4">
-                <div>
-                  <label>Start Time</label>
-                </div>
-                <div>
-                  <input type='time' value={inputControl.startTime} onChange={handleStart} className='rounded p-1 text-black' id="startTime"/>                  
-                </div>
-                <div>
-                  <label>End Time</label>
-                </div>
-                <div>
-                  <input type='time' value={inputControl.endTime} onChange={handleEnd} className='rounded p-1 text-black' id="endTime"/>                  
-                </div>
-                <div className='mt-5'>
-                  <label>Name</label>
-                </div>
-                <div className="mt-5 col-span-3">
-                  <input type='text' value={inputControl.name} onChange={handleName} className='p-1 text-black rounded' id='name'/>
-                </div>
-                <div className='mt-5'>
-                  <label>Number of people</label>
-                </div>
-                <div className="mt-5 col-span-3">
-                  <input type='number' value={inputControl.number_of_people} onChange={handleNumber} className='rounded p-1 text-black w-20' id='number'/>
-                </div>
-                <div className='mt-5'>
-                  <label>Notes</label>
-                </div>
-                <div className="mt-5 col-span-3">
-                  <textarea value={inputControl.notes} onChange={handleNotes} className='p-1 text-black rounded w-80 align-text-top ' id='notes'/>
-                </div>
-            </div>
-            
-            <div className="flex items-center p-4 md:p-5 border-t border-gray-200 rounded-b dark:border-gray-600">
-                <button 
-                  onClick={sendEdit} 
-                  disabled={inputControl.name.length === 0 || (((Number(inputControl.startTime.slice(0,2))) > Number(inputControl.endTime.slice(0,2))) || (Number(inputControl.startTime.slice(0,2)) >= Number(inputControl.endTime.slice(0,2)) && (Number(inputControl.startTime.slice(3,5)) > Number(inputControl.endTime.slice(3,5)))))} 
-                  data-modal-hide="default-modal" 
-                  type="button" 
-                  className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 disabled:opacity-25">
-                    Edit
-                  </button>
-                <button onClick={() => setShowEditModal(false)} type="button" className="ms-3 text-gray-500 bg-white hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg border border-gray-200 text-sm font-medium px-5 py-2.5 hover:text-gray-900 focus:z-10 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-500 dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-gray-600">Cancel</button>
-            </div>
-        </div>
-    </div>
+<EditModal showEditModal={showEditModal} currentRoom={currentRoom} setShowEditModal={setShowEditModal} inputControl={inputControl} handleStart={handleStart} handleEnd={handleEnd} handleName={handleName} handleNumber={handleNumber} handleNotes={handleNotes} sendEdit={sendEdit}></EditModal>
+<DeleteModal showConfirmModal={showConfirmModal} setShowConfirmModal={setShowConfirmModal} handleDelete={handleDelete} inputControl={inputControl}></DeleteModal>
+<div className="flex flex-row w-100 justify-end">
+  <div className={classNames("p-2 m-3", {'hidden' : !accessToken && !expiresIn})}>
+    <button onClick={getStats} className="bg-violet-500 p-2 m-3 rounded">Get Room Stats</button>
+    <input value={statsControl.startTime} onChange={handleStatsStart} onFocus={closeStats} type="date" className="m-3 text-black" />
+    <input value={statsControl.endTime} onChange={handleStatsEnd} onFocus={closeStats} type="date" className="m-3 text-black" />
+  </div>
+  <div className="p-2 m-3">
+  <button
+    id="authorize_button"
+    hidden={accessToken && expiresIn}
+    onClick={handleAuthClick}
+    className="bg-green-500 p-2 m-3 rounded"
+  >
+    Authorize
+  </button>
+  <button
+    id="signout_button"
+    hidden={!accessToken && !expiresIn}
+    onClick={handleSignoutClick}
+    className="bg-red-500 p-2 m-3 rounded"
+  >
+    Sign Out
+  </button>
+  </div>
+  
+  <pre id="content" style={{ whiteSpace: "pre-wrap" }}></pre>
 </div>
-<div 
-  id="edit-modal" 
-  tabIndex="-1" 
-  aria-hidden="true" 
-  className=
-  {classNames('overflow-y-auto overflow-x-hidden absolute top-1/4 left-1/3 w-1/2 z-50 justify-center items-center max-h-full',
-  {'hidden' : !showConfirmModal})}
->
-    <div className="relative p-4 w-full max-w-2xl max-h-full">
-        <div className="relative bg-white rounded-lg shadow dark:bg-gray-700">
-            <div className="flex items-center justify-between p-4 md:p-5 border-b rounded-t dark:border-gray-600">
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-                    Confirm Delete
-                </h3>
-                <button type="button" className="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center dark:hover:bg-gray-600 dark:hover:text-white" onClick={() => setShowConfirmModal(false)}>
-                    <svg className="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
-                        <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
-                    </svg>
-                    <span className="sr-only">Close modal</span>
-                </button>
-            </div>
-            <div className="p-4 bg-red-700 text-4xl">
-                Are you sure?
-            </div>
-            
-            <div className="flex items-center p-4 md:p-5 border-t border-gray-200 rounded-b dark:border-gray-600">
-                <button 
-                  onClick={handleDelete} 
-                  disabled={inputControl.name.length === 0 || (((Number(inputControl.startTime.slice(0,2))) > Number(inputControl.endTime.slice(0,2))) || (Number(inputControl.startTime.slice(0,2)) >= Number(inputControl.endTime.slice(0,2)) && (Number(inputControl.startTime.slice(3,5)) > Number(inputControl.endTime.slice(3,5)))))} 
-                  data-modal-hide="default-modal" 
-                  type="button" 
-                  className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 disabled:opacity-25">
-                    Delete
-                  </button>
-                <button onClick={() => setShowConfirmModal(false)} type="button" className="ms-3 text-gray-500 bg-white hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg border border-gray-200 text-sm font-medium px-5 py-2.5 hover:text-gray-900 focus:z-10 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-500 dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-gray-600">Cancel</button>
-            </div>
-        </div>
+<div className={classNames("grid grid-cols-5", {'hidden' : !accessToken && !expiresIn})}>
+  <div className="flex flex-col text-center">
+    <h4>Art Room</h4>
+    {currentEvents["Art Room"]}
+    <div className="flex flex-row justify-center">
+      <button onClick={() => {setCurrentRoom("Art Room"); addEvent()}} className="bg-green-500 mt-5 p-2 w-1/2 rounded">Add Booking</button>
     </div>
+  </div>
+  <div className="flex flex-col text-center">
+    <h4>Local History Room</h4>
+    {currentEvents["Local History Room"]}
+    <div className="flex flex-row justify-center">
+      <button onClick={() => {setCurrentRoom("Local History Room"); addEvent()}} className="bg-green-500 mt-5 p-2 w-1/2 rounded">Add Booking</button>
+    </div>
+  </div>
+  <div className="flex flex-col text-center">
+    <h4>Study Room 1</h4>
+    {currentEvents["Study Room 1"]}
+    <div className="flex flex-row justify-center">
+      <button onClick={() => {setCurrentRoom("Study Room 1"); addEvent()}} className="bg-green-500 mt-5 p-2 w-1/2 rounded">Add Booking</button>
+    </div>
+  </div>
+  <div className="flex flex-col text-center">
+    <h4>Study Room 2</h4>
+    {currentEvents["Study Room 2"]}
+    <div className="flex flex-row justify-center">
+      <button onClick={() => {setCurrentRoom("Study Room 2"); addEvent()}} className="bg-green-500 mt-5 p-2 w-1/2 rounded">Add Booking</button>
+    </div>
+  </div>
+  <div className="flex flex-col text-center">
+    <h4>Study Room 3</h4>
+    {currentEvents["Study Room 3"]}
+    <div className="flex flex-row justify-center">
+      <button onClick={() => {setCurrentRoom("Study Room 3"); addEvent()}} className="bg-green-500 mt-5 p-2 w-1/2 rounded">Add Booking</button>
+    </div>
+  </div>
 </div>
-    <div className="flex flex-row w-100 justify-end">
-      <div className={classNames("p-2 m-3", {'hidden' : !accessToken && !expiresIn})}>
-        <button onClick={getStats} className="bg-violet-500 p-2 m-3 rounded">Get Room Stats</button>
-        <input value={statsControl.startTime} onChange={handleStatsStart} onFocus={closeStats} type="date" className="m-3 text-black" />
-        <input value={statsControl.endTime} onChange={handleStatsEnd} onFocus={closeStats} type="date" className="m-3 text-black" />
-      </div>
-      <div className="p-2 m-3">
-      <button
-        id="authorize_button"
-        hidden={accessToken && expiresIn}
-        onClick={handleAuthClick}
-        className="bg-green-500 p-2 m-3 rounded"
-      >
-        Authorize
-      </button>
-      <button
-        id="signout_button"
-        hidden={!accessToken && !expiresIn}
-        onClick={handleSignoutClick}
-        className="bg-red-500 p-2 m-3 rounded"
-      >
-        Sign Out
-      </button>
-      </div>
-      
-      <pre id="content" style={{ whiteSpace: "pre-wrap" }}></pre>
-    </div>
-    <div className={classNames("grid grid-cols-5", {'hidden' : !accessToken && !expiresIn})}>
-      <div className="flex flex-col text-center">
-        <h4>Art Room</h4>
-        {currentEvents["Art Room"]}
-        <div className="flex flex-row justify-center">
-          <button onClick={() => {setCurrentRoom("Art Room"); addEvent()}} className="bg-green-500 mt-5 p-2 w-1/2 rounded">Add Booking</button>
-        </div>
-      </div>
-      <div className="flex flex-col text-center">
-        <h4>Local History Room</h4>
-        {currentEvents["Local History Room"]}
-        <div className="flex flex-row justify-center">
-          <button onClick={() => {setCurrentRoom("Local History Room"); addEvent()}} className="bg-green-500 mt-5 p-2 w-1/2 rounded">Add Booking</button>
-        </div>
-      </div>
-      <div className="flex flex-col text-center">
-        <h4>Study Room 1</h4>
-        {currentEvents["Study Room 1"]}
-        <div className="flex flex-row justify-center">
-          <button onClick={() => {setCurrentRoom("Study Room 1"); addEvent()}} className="bg-green-500 mt-5 p-2 w-1/2 rounded">Add Booking</button>
-        </div>
-      </div>
-      <div className="flex flex-col text-center">
-        <h4>Study Room 2</h4>
-        {currentEvents["Study Room 2"]}
-        <div className="flex flex-row justify-center">
-          <button onClick={() => {setCurrentRoom("Study Room 2"); addEvent()}} className="bg-green-500 mt-5 p-2 w-1/2 rounded">Add Booking</button>
-        </div>
-      </div>
-      <div className="flex flex-col text-center">
-        <h4>Study Room 3</h4>
-        {currentEvents["Study Room 3"]}
-        <div className="flex flex-row justify-center">
-          <button onClick={() => {setCurrentRoom("Study Room 3"); addEvent()}} className="bg-green-500 mt-5 p-2 w-1/2 rounded">Add Booking</button>
-        </div>
-      </div>
-    </div>
 </div>
 
   );
