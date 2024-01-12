@@ -17,6 +17,13 @@ export const Calendar = () => {
   const [ accessToken, setAccessToken ]  = useState(window.localStorage.getItem("access_token"));
   const [ expiresIn, setExpiresIn ] = useState(window.localStorage.getItem("expires_in")); 
 
+  useEffect(() => {
+    if (!accessToken) {
+      setAccessToken(window.localStorage.getItem('access_token'));
+      setExpiresIn(window.localStorage.getItem('expires_in'));
+    }
+  }, [accessToken, expiresIn]);
+
   const RoomIDs = {
     "Local History Room": '3ecf0ad6f68abeaec4d12dc940ccfdcee973d96406adae96598d147dbf1930c3@group.calendar.google.com',
     "Art Room": 'fea143931218c9dcbe73cf9e0039cf275f4f6d3c52b6acdbc966a7152988fc42@group.calendar.google.com',
@@ -25,6 +32,8 @@ export const Calendar = () => {
     "Study Room 3": 'a297e813fee4f4f0803f4d7cbb928519be7c9f16bd5bba8d9aff20e9cf084feb@group.calendar.google.com',
   }
 
+  const DMLID = "1e1304c1e62c95e48b8222d2c588964dbcd94bb8f1445b134a9b4d9a6d31f23a@group.calendar.google.com";
+
   const [ currentEvents, setCurrentEvents ] = useState({
     "Local History Room": <div>Loading...</div>,
     "Art Room": <div>Loading...</div>,
@@ -32,6 +41,10 @@ export const Calendar = () => {
     "Study Room 2": <div>Loading...</div>,
     "Study Room 3": <div>Loading...</div>,
   })
+
+  const [ DMLSessions, setDMLSessions ] = useState(
+    <div>Loading...</div>
+  )
 
   const [ inputControl, setInputControl ] = useState({
     startTime: "",
@@ -51,13 +64,16 @@ export const Calendar = () => {
   if (today_month.length === 1) {
     today_month = "0" + today_month;
   }
+
+  var prevDate = window.localStorage.getItem("currentDate");
+  console.log(prevDate);
   
   const [ statsControl, setStatsControl ] = useState({
     startTime: `${today_year}-${today_month}-${today_day}`,
     endTime: `${today_year}-${today_month}-${today_day}`,
   })
 
-  const [ currentDate, setCurrentDate ] = useState({
+  const [ currentDate, setCurrentDate ] = useState(prevDate ? JSON.parse(prevDate) : {
     day: today_day,
     month: today_month,
     year: today_year,
@@ -65,20 +81,14 @@ export const Calendar = () => {
   })
 
   const [ showModal, setShowModal ] = useState(false);
-
   const [ showStatsModal, setShowStatsModal ] = useState(false);
-
   const [ showEditModal, setShowEditModal ] = useState(false);
-
-  const [ editId, setEditId ] = useState("");
-  
+  const [ editId, setEditId ] = useState("");  
   const [ currentRoom, setCurrentRoom ] = useState('Art Room');
-
   const [ statsState, setStatsState ] = useState();
-
   const [ showConfirmModal, setShowConfirmModal ] = useState(false);
-
   const [ currentEvent , setCurrentEvent ] = useState();
+  const [ showDML, setShowDML ] = useState(false);
 
   let gapiInited = false,
   gisInited = false,
@@ -86,12 +96,14 @@ export const Calendar = () => {
   
   useEffect(() => {
     //const expiryTime = new Date().getTime() + expiresIn * 1000;
+    while (!gapi);
     gapiLoaded();
     gisLoaded();  
     
   }, []); 
 
   useEffect(() => {
+    if (gapi.client && currentDate) {
     (async () => {
       var newEvents = {};
       for (var key of Object.keys(RoomIDs)) {
@@ -99,13 +111,17 @@ export const Calendar = () => {
         newEvents[key] = events;        
       }
       setCurrentEvents(newEvents);
+      updateDML();
     })();
+    }
   }, [currentDate])
 
 
  
   function gapiLoaded() {
+    
     gapi.load("client", initializeGapiClient);
+    
 
   } 
 
@@ -141,7 +157,7 @@ export const Calendar = () => {
       callback: "", // defined later
       }); 
       gisInited = true;
-      
+    
   }
 
   //Enables user interaction after all libraries are loaded. 
@@ -151,6 +167,7 @@ export const Calendar = () => {
       if (resp.error) {
         throw resp;
       }
+      console.log(gapi.client.getToken());
       const { access_token, expires_in } = gapi.client.getToken();
       window.localStorage.setItem("access_token", access_token);
       window.localStorage.setItem("expires_in", expires_in);
@@ -169,7 +186,7 @@ export const Calendar = () => {
       tokenClient.requestAccessToken({ prompt: "consent" });
      } else {
       // Skip display of account chooser and consent dialog for an existing session.
-      tokenClient.requestAccessToken({ prompt: ""});
+      tokenClient.requestAccessToken({ prompt: "" });
     }
     
   } 
@@ -184,12 +201,13 @@ export const Calendar = () => {
       localStorage.clear();
       
     }
-    setAccessToken(null);
+    //setAccessToken(null);
     setExpiresIn(null);
     window.location.reload();
   } 
 
   function parseDateTime(dateString) {
+    console.log(dateString);
     var hour = Number(dateString.slice(11, 13));
     var amPm = hour >= 12 ? "p.m." : "a.m.";
     hour = hour === 0 ? 12 : hour;
@@ -208,7 +226,8 @@ export const Calendar = () => {
       response = await gapi.client.calendar.events.get(request);
     } catch (err) {
       //document.getElementById("content").innerText = err.message;
-      handleSignoutClick();
+      handleAuthClick();
+      return;
     }
     console.log(response);
     setInputControl({
@@ -261,7 +280,8 @@ export const Calendar = () => {
         setCurrentEvents(newEvents);
       },
         (error) => {
-          handleSignoutClick();
+          handleAuthClick();
+          return;
       }
     )
     setShowEditModal(false);
@@ -282,7 +302,8 @@ function handleDelete() {
       setCurrentEvents(newEvents);
     },
     (error) => {
-      handleSignoutClick();
+      handleAuthClick();
+      return;
     }
   );
   setShowConfirmModal(false);
@@ -312,7 +333,9 @@ function confirmDelete(roomId, id) {
       response = await gapi.client.calendar.events.list(request);
     } catch (err) {
       //document.getElementById("content").innerText = err.message;
-      handleSignoutClick();
+      //handleSignoutClick();
+      handleAuthClick();
+      return;
     }
     const events = response.result.items;
     if (!events || events.length === 0) {
@@ -359,6 +382,79 @@ function confirmDelete(roomId, id) {
       )
     });
     return output;
+  } 
+
+  
+
+  async function updateDML() {    
+    const dml_today = new Date().toLocaleDateString();
+    var [ dml_month, dml_day, dml_year ] = dml_today.split("/");
+
+    const end_of_month_month = dml_month <= 11 ? dml_month + 1 : 1;
+    const end_of_month_day = dml_day <= 28 ? dml_day : 28;
+    const end_of_month_year = dml_month <= 11 ? dml_year : dml_year + 1;
+
+    if (today_day.length === 1) {
+      today_day = "0" + today_day;
+    }
+
+    if (today_month.length === 1) {
+      today_month = "0" + today_month;
+    }
+
+    let start = `${dml_year}-${dml_month}-${dml_day}T00:00:00.000-05:00`;
+    let end = `${end_of_month_year}-${end_of_month_month}-${end_of_month_day}T23:59:59.000-05:00`;
+  
+    let response;
+    try {
+      const request = {
+        calendarId: DMLID,
+        timeMin: start,
+        timeMax: end,
+        showDeleted: false,
+        singleEvents: true,
+        orderBy: "startTime",
+      };
+      response = await gapi.client.calendar.events.list(request);
+    } catch (err) {
+      //document.getElementById("content").innerText = err.message;
+      //handleSignoutClick();
+      handleAuthClick();
+      return;
+    }
+    const events = response.result.items;
+    if (!events || events.length === 0) {
+      //document.getElementById("content").innerText = "No events found.";
+      return;
+    }
+
+    // Flatten to string to display
+    const output = await events.map((event) => {
+      if (!event.summary) {
+        return <div key={event.id}>No title</div>
+      }
+      return (
+      <div className="bg-blue-600 mt-5 ml-2 mr-2 p-2 rounded grid grid-rows-1 grid-cols-8" key={event.id}>
+        <div className="col-span-8 row-start-1 col-start-1">
+          
+          <div>
+            {parseDateTime(event.start.dateTime)} - {parseDateTime(event.end.dateTime)}
+          </div>
+          <div>
+            {`${event.start.dateTime.slice(5,7)}-${event.start.dateTime.slice(8,10)}-${event.start.dateTime.slice(0,4)}`}
+          </div>
+          <div>
+            {event.extendedProperties ? "Headcount: " + event.extendedProperties["private"].number_of_people : "Available"}
+          </div>
+          <div>
+            {event.description ? "Notes: " + event.description : ""}
+          </div>
+        </div>
+        
+      </div>
+      )
+    });
+    setDMLSessions(output);
   } 
 
   async function getRoomStats(id) {       
@@ -560,30 +656,68 @@ function confirmDelete(roomId, id) {
   }
 
   var handleChangeDate = (e) => {
-    setCurrentDate({
+    var newDate = {
       year: e.target.value.slice(0,4),
       month: e.target.value.slice(5,7),
       day: e.target.value.slice(8, 10),
       formatted: e.target.value,
-    })
+    };
+    setCurrentDate(newDate);
+    window.localStorage.setItem("currentDate", JSON.stringify(newDate));
+  }
+
+  const cancelDML = () => {
+    setShowDML(false);
   }
  
   return (
     <div>
+      <div 
+      id="dml-modal" 
+      tabIndex="-1" 
+      aria-hidden="true" 
+      className=
+      {classNames('absolute w-full z-50 justify-center items-center',
+      {'hidden' : !showDML})}
+    >
+      <div className="relative p-4 w-full max-h-full">
+          <div className="relative bg-white rounded-lg shadow dark:bg-gray-700">
+              <div className="flex items-center justify-between p-4 md:p-5 border-b rounded-t dark:border-gray-600">
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                      DML Sessions
+                  </h3>
+                  <button type="button" className="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center dark:hover:bg-gray-600 dark:hover:text-white" onClick={cancelDML}>
+                      <svg className="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
+                          <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
+                      </svg>
+                      <span className="sr-only">Close modal</span>
+                  </button>
+              </div>
+              <div className="p-4 bg-red-700 grid grid-cols-4">
+                  {DMLSessions}
+              </div>
+              
+              <div className="flex items-center p-4 md:p-5 border-t border-gray-200 rounded-b dark:border-gray-600">
+                  
+                  <button onClick={cancelDML} type="button" className="ms-3 text-gray-500 bg-white hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg border border-gray-200 text-sm font-medium px-5 py-2.5 hover:text-gray-900 focus:z-10 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-500 dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-gray-600">Cancel</button>
+              </div>
+          </div>
+      </div>
+    </div>
       <BookModal showModal={showModal} currentRoom={currentRoom} cancelAdd={cancelAdd} inputControl={inputControl} handleStart={handleStart} handleEnd={handleEnd} handleName={handleName} handleNumber={handleNumber} handleNotes={handleNotes} sendEvent={sendEvent} ></BookModal>
       <StatsModal showStatsModal={showStatsModal} statsControl={statsControl} closeStats={closeStats} getFormattedStats={getFormattedStats}></StatsModal>
       <EditModal showEditModal={showEditModal} currentRoom={currentRoom} setShowEditModal={setShowEditModal} inputControl={inputControl} handleStart={handleStart} handleEnd={handleEnd} handleName={handleName} handleNumber={handleNumber} handleNotes={handleNotes} sendEdit={sendEdit}></EditModal>
       <DeleteModal showConfirmModal={showConfirmModal} setShowConfirmModal={setShowConfirmModal} handleDelete={handleDelete} inputControl={inputControl}></DeleteModal>
       <div className="grid grid-cols-6 pb-10">
         <div className="col-span-3 col-start-1 row-start-1 flex flex-row justify-start items-center">          
-          <button className="bg-orange-500 p-2 m-1 rounded">Digital Media Lab</button>
+          <button hidden={!accessToken} onClick={() => setShowDML(true)} className="bg-orange-500 p-2 m-1 rounded">Digital Media Lab</button>
           <div className={classNames("p-2 m-1", {'hidden' : !accessToken && !expiresIn})}>
             <button onClick={getStats} className="bg-violet-500 p-2 m-1 rounded">Get Room Stats</button>
             <input value={statsControl.startTime} onChange={handleStatsStart} onFocus={closeStats} type="date" className="m-3 text-black" />
             <input value={statsControl.endTime} onChange={handleStatsEnd} onFocus={closeStats} type="date" className="m-3 text-black" />
           </div>
         </div>    
-        <div className="flex flex-row col-span-4 row-start-1 col-start-2 justify-center items-center text-xl">
+        <div className={classNames("flex flex-row col-span-4 row-start-1 col-start-2 justify-center items-center text-xl", {'hidden' : !accessToken})}>
           <label>Room reservations for </label>
           <input value={currentDate.formatted} onChange={handleChangeDate} type="date" className="m-3 text-black" />
         </div>      
