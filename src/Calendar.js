@@ -57,6 +57,13 @@ export const Calendar = () => {
     endTime: `${today_year}-${today_month}-${today_day}`,
   })
 
+  const [ currentDate, setCurrentDate ] = useState({
+    day: today_day,
+    month: today_month,
+    year: today_year,
+    formatted: `${today_year}-${today_month}-${today_day}`,
+  })
+
   const [ showModal, setShowModal ] = useState(false);
 
   const [ showStatsModal, setShowStatsModal ] = useState(false);
@@ -83,6 +90,17 @@ export const Calendar = () => {
     gisLoaded();  
     
   }, []); 
+
+  useEffect(() => {
+    (async () => {
+      var newEvents = {};
+      for (var key of Object.keys(RoomIDs)) {
+        var events = await listUpcomingEvents(key);
+        newEvents[key] = events;        
+      }
+      setCurrentEvents(newEvents);
+    })();
+  }, [currentDate])
 
 
  
@@ -151,7 +169,7 @@ export const Calendar = () => {
       tokenClient.requestAccessToken({ prompt: "consent" });
      } else {
       // Skip display of account chooser and consent dialog for an existing session.
-      tokenClient.requestAccessToken();
+      tokenClient.requestAccessToken({ prompt: ""});
     }
     
   } 
@@ -278,13 +296,15 @@ function confirmDelete(roomId, id) {
 
   
   async function listUpcomingEvents(id) {    
-    var today = new Date().toLocaleString();
-    today = `${today_year}-${today_month}-${today_day}T00:00:00.000-05:00`;
+    let current_date = `${currentDate.year}-${currentDate.month}-${currentDate.day}T00:00:00.000-05:00`;
+    let end_of_day = `${currentDate.year}-${currentDate.month}-${currentDate.day}T23:59:59.000-05:00`;
+  
     let response;
     try {
       const request = {
         calendarId: RoomIDs[id],
-        timeMin: today,
+        timeMin: current_date,
+        timeMax: end_of_day,
         showDeleted: false,
         singleEvents: true,
         orderBy: "startTime",
@@ -379,9 +399,8 @@ function confirmDelete(roomId, id) {
 
 
   async function sendEvent() {
-    var todaysDate = new Date();
-    var startTime = `${todaysDate.getFullYear()}-${todaysDate.getMonth() + 1}-${todaysDate.getDate()}T${inputControl.startTime}:00.000`;
-    var endTime = `${todaysDate.getFullYear()}-${todaysDate.getMonth() + 1}-${todaysDate.getDate()}T${inputControl.endTime}:00.000`;
+    var startTime = `${currentDate.year}-${currentDate.month}-${currentDate.day}T${inputControl.startTime}:00.000`;
+    var endTime = `${currentDate.year}-${currentDate.month}-${currentDate.day}T${inputControl.endTime}:00.000`;
     var event = {
       kind: "calendar#event",
       summary: inputControl.name,
@@ -540,6 +559,14 @@ function confirmDelete(roomId, id) {
     return statsArray;
   }
 
+  var handleChangeDate = (e) => {
+    setCurrentDate({
+      year: e.target.value.slice(0,4),
+      month: e.target.value.slice(5,7),
+      day: e.target.value.slice(8, 10),
+      formatted: e.target.value,
+    })
+  }
  
   return (
     <div>
@@ -547,68 +574,77 @@ function confirmDelete(roomId, id) {
       <StatsModal showStatsModal={showStatsModal} statsControl={statsControl} closeStats={closeStats} getFormattedStats={getFormattedStats}></StatsModal>
       <EditModal showEditModal={showEditModal} currentRoom={currentRoom} setShowEditModal={setShowEditModal} inputControl={inputControl} handleStart={handleStart} handleEnd={handleEnd} handleName={handleName} handleNumber={handleNumber} handleNotes={handleNotes} sendEdit={sendEdit}></EditModal>
       <DeleteModal showConfirmModal={showConfirmModal} setShowConfirmModal={setShowConfirmModal} handleDelete={handleDelete} inputControl={inputControl}></DeleteModal>
-      <div className="flex flex-row w-100 justify-end">
-      <div className={classNames("p-2 m-3", {'hidden' : !accessToken && !expiresIn})}>
-        <button onClick={getStats} className="bg-violet-500 p-2 m-3 rounded">Get Room Stats</button>
-        <input value={statsControl.startTime} onChange={handleStatsStart} onFocus={closeStats} type="date" className="m-3 text-black" />
-        <input value={statsControl.endTime} onChange={handleStatsEnd} onFocus={closeStats} type="date" className="m-3 text-black" />
+      <div className="grid grid-cols-6 pb-10">
+        <div className="col-span-3 col-start-1 row-start-1 flex flex-row justify-start items-center">          
+          <button className="bg-orange-500 p-2 m-1 rounded">Digital Media Lab</button>
+          <div className={classNames("p-2 m-1", {'hidden' : !accessToken && !expiresIn})}>
+            <button onClick={getStats} className="bg-violet-500 p-2 m-1 rounded">Get Room Stats</button>
+            <input value={statsControl.startTime} onChange={handleStatsStart} onFocus={closeStats} type="date" className="m-3 text-black" />
+            <input value={statsControl.endTime} onChange={handleStatsEnd} onFocus={closeStats} type="date" className="m-3 text-black" />
+          </div>
+        </div>    
+        <div className="flex flex-row col-span-4 row-start-1 col-start-2 justify-center items-center text-xl">
+          <label>Room reservations for </label>
+          <input value={currentDate.formatted} onChange={handleChangeDate} type="date" className="m-3 text-black" />
+        </div>      
+        <div className="flex flex-row col-span-1 col-start-6 justify-end items-center">
+          <div className="p-2 m-1">
+            <button
+              id="authorize_button"
+              hidden={accessToken && expiresIn}
+              onClick={handleAuthClick}
+              className="bg-green-500 p-2 m-1 rounded"
+            >
+              Authorize
+            </button>
+            <button
+              id="signout_button"
+              hidden={!accessToken && !expiresIn}
+              onClick={handleSignoutClick}
+              className="bg-red-500 p-2 m-1 rounded"
+            >
+              Sign Out
+            </button>
+          </div>            
+        </div>
       </div>
-      <div className="p-2 m-3">
-        <button
-          id="authorize_button"
-          hidden={accessToken && expiresIn}
-          onClick={handleAuthClick}
-          className="bg-green-500 p-2 m-3 rounded"
-        >
-          Authorize
-        </button>
-        <button
-          id="signout_button"
-          hidden={!accessToken && !expiresIn}
-          onClick={handleSignoutClick}
-          className="bg-red-500 p-2 m-3 rounded"
-        >
-          Sign Out
-        </button>
-      </div>  
-      <pre id="content" style={{ whiteSpace: "pre-wrap" }}></pre>
-    </div>
-    <div className={classNames("grid grid-cols-5", {'hidden' : !accessToken && !expiresIn})}>
+     
+      <div className={classNames("grid grid-cols-5", {'hidden' : !accessToken && !expiresIn})}>
+        <div className="flex flex-col text-center">
+          <h4>Art Room</h4>
+          {currentEvents["Art Room"]}
+          <div className="flex flex-row justify-center">
+          <button onClick={() => {setCurrentRoom("Art Room"); addEvent()}} className="bg-green-500 mt-5 p-2 w-1/2 rounded">Add Booking</button>
+        </div>
+      </div>
       <div className="flex flex-col text-center">
-        <h4>Art Room</h4>
-        {currentEvents["Art Room"]}
+        <h4>Local History Room</h4>
+        {currentEvents["Local History Room"]}
         <div className="flex flex-row justify-center">
-        <button onClick={() => {setCurrentRoom("Art Room"); addEvent()}} className="bg-green-500 mt-5 p-2 w-1/2 rounded">Add Booking</button>
+          <button onClick={() => {setCurrentRoom("Local History Room"); addEvent()}} className="bg-green-500 mt-5 p-2 w-1/2 rounded">Add Booking</button>
+        </div>
       </div>
-    </div>
-    <div className="flex flex-col text-center">
-      <h4>Local History Room</h4>
-      {currentEvents["Local History Room"]}
-      <div className="flex flex-row justify-center">
-        <button onClick={() => {setCurrentRoom("Local History Room"); addEvent()}} className="bg-green-500 mt-5 p-2 w-1/2 rounded">Add Booking</button>
+      <div className="flex flex-col text-center">
+        <h4>Study Room 1</h4>
+        {currentEvents["Study Room 1"]}
+        <div className="flex flex-row justify-center">
+          <button onClick={() => {setCurrentRoom("Study Room 1"); addEvent()}} className="bg-green-500 mt-5 p-2 w-1/2 rounded">Add Booking</button>
+        </div>
       </div>
-    </div>
-    <div className="flex flex-col text-center">
-      <h4>Study Room 1</h4>
-      {currentEvents["Study Room 1"]}
-      <div className="flex flex-row justify-center">
-        <button onClick={() => {setCurrentRoom("Study Room 1"); addEvent()}} className="bg-green-500 mt-5 p-2 w-1/2 rounded">Add Booking</button>
+      <div className="flex flex-col text-center">
+        <h4>Study Room 2</h4>
+        {currentEvents["Study Room 2"]}
+        <div className="flex flex-row justify-center">
+          <button onClick={() => {setCurrentRoom("Study Room 2"); addEvent()}} className="bg-green-500 mt-5 p-2 w-1/2 rounded">Add Booking</button>
+        </div>
       </div>
-    </div>
-    <div className="flex flex-col text-center">
-      <h4>Study Room 2</h4>
-      {currentEvents["Study Room 2"]}
-      <div className="flex flex-row justify-center">
-        <button onClick={() => {setCurrentRoom("Study Room 2"); addEvent()}} className="bg-green-500 mt-5 p-2 w-1/2 rounded">Add Booking</button>
+      <div className="flex flex-col text-center">
+        <h4>Study Room 3</h4>
+        {currentEvents["Study Room 3"]}
+        <div className="flex flex-row justify-center">
+          <button onClick={() => {setCurrentRoom("Study Room 3"); addEvent()}} className="bg-green-500 mt-5 p-2 w-1/2 rounded">Add Booking</button>
+        </div>
       </div>
-    </div>
-    <div className="flex flex-col text-center">
-      <h4>Study Room 3</h4>
-      {currentEvents["Study Room 3"]}
-      <div className="flex flex-row justify-center">
-        <button onClick={() => {setCurrentRoom("Study Room 3"); addEvent()}} className="bg-green-500 mt-5 p-2 w-1/2 rounded">Add Booking</button>
-      </div>
-    </div>
     </div>
 </div>
 
