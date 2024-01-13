@@ -54,6 +54,13 @@ export const Calendar = () => {
     notes: ""
   });
 
+  const [ DMLControl, setDMLControl ] = useState({   
+    name: "",
+    contact: "",
+    number_of_people: 0,
+    notes: ""
+  })
+
   const today = new Date().toLocaleDateString();
   var [ today_month, today_day, today_year ] =today.split("/");
 
@@ -83,6 +90,7 @@ export const Calendar = () => {
   const [ showModal, setShowModal ] = useState(false);
   const [ showStatsModal, setShowStatsModal ] = useState(false);
   const [ showEditModal, setShowEditModal ] = useState(false);
+  const [ showDMLEditModal, setShowDMLEditModal ] = useState(false);
   const [ editId, setEditId ] = useState("");  
   const [ currentRoom, setCurrentRoom ] = useState('Art Room');
   const [ statsState, setStatsState ] = useState();
@@ -111,7 +119,7 @@ export const Calendar = () => {
         newEvents[key] = events;        
       }
       setCurrentEvents(newEvents);
-      updateDML();
+      
     })();
     }
   }, [currentDate])
@@ -236,7 +244,7 @@ export const Calendar = () => {
       name: response.result.summary ? response.result.summary : "",
       number_of_people: response.result.extendedProperties.private.number_of_people,
       notes: response.result.description ? response.result.description : "",
-    })
+    })    
     setCurrentRoom(roomId);
     setEditId(response.result);
     setShowEditModal(true);
@@ -245,8 +253,8 @@ export const Calendar = () => {
   async function sendEdit() {
     console.log(inputControl);
     var todaysDate = new Date();
-    var startTime = `${todaysDate.getFullYear()}-${todaysDate.getMonth() + 1}-${todaysDate.getDate()}T${inputControl.startTime}:00.000`;
-    var endTime = `${todaysDate.getFullYear()}-${todaysDate.getMonth() + 1}-${todaysDate.getDate()}T${inputControl.endTime}:00.000`;
+    var startTime = `${currentDate.year}-${currentDate.month}-${currentDate.day}T${inputControl.startTime}:00.000`;
+    var endTime = `${currentDate.year}-${currentDate.month}-${currentDate.day}T${inputControl.endTime}:00.000`;
     var event = {
         ...editId,
         summary: inputControl.name,
@@ -285,6 +293,59 @@ export const Calendar = () => {
       }
     )
     setShowEditModal(false);
+  }
+
+  async function handleDML(eventId) {
+    let response;
+    try {
+      const request = {
+        calendarId: DMLID,
+        eventId: eventId,
+      };
+      response = await gapi.client.calendar.events.get(request);
+    } catch (err) {
+      //document.getElementById("content").innerText = err.message;
+      handleAuthClick();
+      return;
+    }
+    setDMLControl({      
+      name: response.result.summary ? response.result.summary : "",
+      number_of_people: response.result.extendedProperties ? response.result.extendedProperties.private.number_of_people : 1,
+      contact: response.result.extendedProperties ? response.result.extendedProperties.private.contact : "",      
+      notes: response.result.description ? response.result.description : "",
+    })
+    setEditId(response.result);
+    setShowDMLEditModal(true);
+  }
+
+  async function sendDML() {
+    var event = {
+        ...editId,
+        summary: DMLControl.name,
+        description: DMLControl.notes,        
+        extendedProperties: {
+          "private": {
+            number_of_people: DMLControl.number_of_people,
+            contact: DMLControl.contact,
+            booked: true,
+          }
+        }
+    };
+    var request = gapi.client.calendar.events.patch({
+      resource: event,
+      calendarId: DMLID,
+      eventId: editId.id,
+    });
+    request.execute(
+      async (event) => {
+        updateDML();
+      },
+        (error) => {
+          handleAuthClick();
+          return;
+      }
+    )
+    setShowDMLEditModal(false);
   }
 
 function handleDelete() {
@@ -337,6 +398,7 @@ function confirmDelete(roomId, id) {
       handleAuthClick();
       return;
     }
+    updateDML();
     const events = response.result.items;
     if (!events || events.length === 0) {
       //document.getElementById("content").innerText = "No events found.";
@@ -430,11 +492,9 @@ function confirmDelete(roomId, id) {
 
     // Flatten to string to display
     const output = await events.map((event) => {
-      if (!event.summary) {
-        return <div key={event.id}>No title</div>
-      }
+      
       return (
-      <div className="bg-blue-600 mt-5 ml-2 mr-2 p-2 rounded grid grid-rows-1 grid-cols-8" key={event.id}>
+      <div className={classNames("mt-5 ml-2 mr-2 p-2 rounded grid grid-rows-1 grid-cols-8", {"bg-blue-600" : !event.extendedProperties}, {"bg-blue-300" : event.extendedProperties})} onClick={() => handleDML(event.id)} key={event.id}>
         <div className="col-span-8 row-start-1 col-start-1">
           
           <div>
@@ -444,7 +504,7 @@ function confirmDelete(roomId, id) {
             {`${event.start.dateTime.slice(5,7)}-${event.start.dateTime.slice(8,10)}-${event.start.dateTime.slice(0,4)}`}
           </div>
           <div>
-            {event.extendedProperties ? "Headcount: " + event.extendedProperties["private"].number_of_people : "Available"}
+            {event.extendedProperties ? `Booked for ${event.summary} - (${event.extendedProperties.private.contact})` : "Available"}
           </div>
           <div>
             {event.description ? "Notes: " + event.description : ""}
@@ -471,7 +531,8 @@ function confirmDelete(roomId, id) {
       response = await gapi.client.calendar.events.list(request);
     } catch (err) {
       //document.getElementById("content").innerText = err.message;
-      handleSignoutClick();
+      handleAuthClick();
+      return;
     }
     const events = response.result.items;
     if (!events || events.length === 0) {
@@ -530,7 +591,7 @@ function confirmDelete(roomId, id) {
         setCurrentEvents(newEvents);
       },
         (error) => {
-          handleSignoutClick();
+          handleAuthClick();
       }
     )
     setShowModal(false);
@@ -611,6 +672,34 @@ function confirmDelete(roomId, id) {
     })
   }
 
+  var handleDMLName = (e) => {
+    setDMLControl({
+      ...DMLControl,
+      name: e.target.value,
+    })
+  }
+
+  var handleDMLNumber = (e) => {
+    setDMLControl({
+      ...DMLControl,
+      number_of_people: e.target.value,
+    })
+  }
+
+  var handleDMLNotes = (e) => {
+    setDMLControl({
+      ...DMLControl,
+      notes: e.target.value,
+    })
+  }
+
+  var handleDMLContact = (e) => {
+    setDMLControl({
+      ...DMLControl,
+      contact: e.target.value,
+    })
+  }
+
   var handleStatsStart = (e) => {
     console.log(e.target.value);
     setStatsControl({
@@ -677,8 +766,9 @@ function confirmDelete(roomId, id) {
       tabIndex="-1" 
       aria-hidden="true" 
       className=
-      {classNames('absolute w-full z-50 justify-center items-center',
-      {'hidden' : !showDML})}
+      {classNames('absolute w-full z-40 justify-center items-center',
+        {'hidden' : !showDML}
+      )}
     >
       <div className="relative p-4 w-full max-h-full">
           <div className="relative bg-white rounded-lg shadow dark:bg-gray-700">
@@ -704,6 +794,69 @@ function confirmDelete(roomId, id) {
           </div>
       </div>
     </div>
+    <div 
+      id="dml-edit-modal" 
+      tabIndex="-1" 
+      aria-hidden="true" 
+      className=
+      {classNames('overflow-y-auto overflow-x-hidden absolute top-1/4 left-1/3 w-1/2 z-50 justify-center items-center max-h-full',
+      {'hidden' : !showDMLEditModal})}
+    >
+      <div className="relative p-4 w-full max-w-2xl max-h-full">
+          <div className="relative bg-white rounded-lg shadow dark:bg-gray-700">
+              <div className="flex items-center justify-between p-4 md:p-5 border-b rounded-t dark:border-gray-600">
+                  <div className="text-xl font-semibold text-gray-900 dark:text-white">
+                    {editId.start ? `Book DML for ${parseDateTime(editId.start.dateTime)} - ${parseDateTime(editId.end.dateTime)} on ${editId.start.dateTime.slice(5,7)}-${editId.start.dateTime.slice(8,10)}-${editId.start.dateTime.slice(0,4)}` : ""}
+                  </div>
+                  <button type="button" className="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center dark:hover:bg-gray-600 dark:hover:text-white" onClick={() => setShowDMLEditModal(false)}>
+                      <svg className="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
+                          <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
+                      </svg>
+                      <span className="sr-only">Close modal</span>
+                  </button>
+              </div>
+              <div className="p-4 bg-red-700 grid grid-cols-4">
+                  
+                  <div className='mt-5'>
+                    <label>Name</label>
+                  </div>
+                  <div className="mt-5 col-span-3">
+                    <input type='text' value={DMLControl.name} onChange={handleDMLName} className='p-1 text-black rounded' id='name'/>
+                  </div>
+                  <div className='mt-5'>
+                    <label>Contact</label>
+                  </div>
+                  <div className="mt-5 col-span-3">
+                    <input type='text' value={DMLControl.contact} onChange={handleDMLContact} className='p-1 text-black rounded' id='name'/>
+                  </div>
+                  <div className='mt-5'>
+                    <label>Number of people</label>
+                  </div>
+                  <div className="mt-5 col-span-3">
+                    <input type='number' value={DMLControl.number_of_people} onChange={handleDMLNumber} className='rounded p-1 text-black w-20' id='number'/>
+                  </div>
+                  <div className='mt-5'>
+                    <label>Notes</label>
+                  </div>
+                  <div className="mt-5 col-span-3">
+                    <textarea value={DMLControl.notes} onChange={handleDMLNotes} className='p-1 text-black rounded w-80 align-text-top ' id='notes'/>
+                  </div>
+              </div>
+              
+              <div className="flex items-center p-4 md:p-5 border-t border-gray-200 rounded-b dark:border-gray-600">
+                  <button 
+                    onClick={sendDML} 
+                    disabled={DMLControl.name.length === 0 || DMLControl.contact.length === 0} 
+                    data-modal-hide="default-modal" 
+                    type="button" 
+                    className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 disabled:opacity-25">
+                      Book
+                    </button>
+                  <button onClick={() => setShowDMLEditModal(false)} type="button" className="ms-3 text-gray-500 bg-white hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg border border-gray-200 text-sm font-medium px-5 py-2.5 hover:text-gray-900 focus:z-10 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-500 dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-gray-600">Cancel</button>
+              </div>
+          </div>
+      </div>
+    </div>
       <BookModal showModal={showModal} currentRoom={currentRoom} cancelAdd={cancelAdd} inputControl={inputControl} handleStart={handleStart} handleEnd={handleEnd} handleName={handleName} handleNumber={handleNumber} handleNotes={handleNotes} sendEvent={sendEvent} ></BookModal>
       <StatsModal showStatsModal={showStatsModal} statsControl={statsControl} closeStats={closeStats} getFormattedStats={getFormattedStats}></StatsModal>
       <EditModal showEditModal={showEditModal} currentRoom={currentRoom} setShowEditModal={setShowEditModal} inputControl={inputControl} handleStart={handleStart} handleEnd={handleEnd} handleName={handleName} handleNumber={handleNumber} handleNotes={handleNotes} sendEdit={sendEdit}></EditModal>
@@ -711,7 +864,7 @@ function confirmDelete(roomId, id) {
       <div className="grid grid-cols-6 pb-10">
         <div className="col-span-3 col-start-1 row-start-1 flex flex-row justify-start items-center">          
           <button hidden={!accessToken} onClick={() => setShowDML(true)} className="bg-orange-500 p-2 m-1 rounded">Digital Media Lab</button>
-          <div className={classNames("p-2 m-1", {'hidden' : !accessToken && !expiresIn})}>
+          <div className={classNames("p-2 m-1", {'hidden' : !accessToken && !expiresIn}, {'z-50': !showDML})}>
             <button onClick={getStats} className="bg-violet-500 p-2 m-1 rounded">Get Room Stats</button>
             <input value={statsControl.startTime} onChange={handleStatsStart} onFocus={closeStats} type="date" className="m-3 text-black" />
             <input value={statsControl.endTime} onChange={handleStatsEnd} onFocus={closeStats} type="date" className="m-3 text-black" />
