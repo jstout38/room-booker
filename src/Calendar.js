@@ -856,46 +856,47 @@ function confirmDelete(roomId, id) {
      
       <div className={classNames("grid grid-cols-6 bg-orange-200 text-black h-screen", {'hidden' : !accessToken && !expiresIn})}>
         <div className="flex flex-col text-center p-2">
-          <h4>Art Room</h4>
-          {currentEvents["Art Room"]}
+          <h4 className="text-xl">Art Room</h4>
           <div className="flex flex-row justify-center">
             <button onClick={() => {setCurrentRoom("Art Room"); addEvent()}} className="bg-green-600 mt-5 p-2 w-1/2 rounded text-white">Add Booking</button>
           </div>
+          {currentEvents["Art Room"]}
+          
         </div>
         <div className="flex flex-col text-center p-2">
-          <h4>Local History Room</h4>
-          {currentEvents["Local History Room"]}
+          <h4 className="text-xl">Local History Room</h4>
           <div className="flex flex-row justify-center">
             <button onClick={() => {setCurrentRoom("Local History Room"); addEvent()}} className="bg-green-600 mt-5 p-2 w-1/2 rounded text-white">Add Booking</button>
           </div>
+          {currentEvents["Local History Room"]}
         </div>
         <div className="flex flex-col text-center p-2">
-          <h4>Study Room 1</h4>
-          {currentEvents["Study Room 1"]}
+          <h4 className="text-xl">Study Room 1</h4>
           <div className="flex flex-row justify-center">
             <button onClick={() => {setCurrentRoom("Study Room 1"); addEvent()}} className="bg-green-600 mt-5 p-2 w-1/2 rounded text-white">Add Booking</button>
           </div>
+          {currentEvents["Study Room 1"]}          
         </div>
         <div className="flex flex-col text-center p-2">
-          <h4>Study Room 2</h4>
-          {currentEvents["Study Room 2"]}
+          <h4 className="text-xl">Study Room 2</h4>
           <div className="flex flex-row justify-center">
             <button onClick={() => {setCurrentRoom("Study Room 2"); addEvent()}} className="bg-green-600 mt-5 p-2 w-1/2 rounded text-white">Add Booking</button>
           </div>
+          {currentEvents["Study Room 2"]}          
         </div>
         <div className="flex flex-col text-center p-2">
-          <h4>Study Room 3</h4>
-          {currentEvents["Study Room 3"]}
+          <h4 className="text-xl">Study Room 3</h4>
           <div className="flex flex-row justify-center">
             <button onClick={() => {setCurrentRoom("Study Room 3"); addEvent()}} className="bg-green-600 mt-5 p-2 w-1/2 rounded text-white">Add Booking</button>
           </div>
+          {currentEvents["Study Room 3"]}          
         </div>
         <div className="flex flex-col text-center bg-purple-300 p-2">
-          <h4>Sensory Room</h4>
-          {currentEvents["Sensory Room"]}
+          <h4 className="text-xl">Sensory Room</h4>
           <div className="flex flex-row justify-center">
             <button onClick={() => {setCurrentRoom("Sensory Room"); addEvent()}} className="bg-green-600 mt-5 p-2 w-1/2 rounded text-white">Add Booking</button>
           </div>
+          {currentEvents["Sensory Room"]}          
       </div>
     </div>
 </div>
