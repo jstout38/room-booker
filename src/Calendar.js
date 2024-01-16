@@ -28,15 +28,15 @@ export const Calendar = () => {
   }, [accessToken, expiresIn]);
 
   const RoomIDs = {
-    "Local History Room": '3ecf0ad6f68abeaec4d12dc940ccfdcee973d96406adae96598d147dbf1930c3@group.calendar.google.com',
-    "Art Room": 'fea143931218c9dcbe73cf9e0039cf275f4f6d3c52b6acdbc966a7152988fc42@group.calendar.google.com',
-    "Study Room 1": '1f559fa14f9310b4940c3f23220406c3c840858db685fa4b98b54188d3c8445c@group.calendar.google.com',
-    "Study Room 2": '006367f94fd414b400bbf6845c10e253629400e10907dce09e9ee47e7c62d746@group.calendar.google.com',
-    "Study Room 3": 'a297e813fee4f4f0803f4d7cbb928519be7c9f16bd5bba8d9aff20e9cf084feb@group.calendar.google.com',
-    "Sensory Room": '4164ff72ef47aa9128b9dfd265e6148fbf799e42c52b4caa5f1b62d2db1b49a8@group.calendar.google.com',
+    "Local History Room": 'c_8fee94ec7ce502f8ecb04860e97898b384555700d380d8eb95a4579d47569105@group.calendar.google.com',
+    "Art Room": 'c_1c69963d5ae33c5dc15b0c163f5e51a9d2b1e9f82b88b3ac5aaf3535f19b2f3a@group.calendar.google.com',
+    "Study Room 1": 'c_44bc2234ce4fca9245f006cac046aba8aa43cd3af9b15a656ed43e1377737caa@group.calendar.google.com',
+    "Study Room 2": 'c_9cb8e721e6a6b4eb236cbc29d528014193fdd9e8b91953eeea51437c36a93d1a@group.calendar.google.com',
+    "Study Room 3": 'c_0bf448ebdffe9d6289231b96539bcf31768b8cd2ffd55089d9231423c1d46cd8@group.calendar.google.com',
+    "Sensory Room": 'c_5ece2679a2d84b0daf73c627e6423d5ffdc1fe2ece359dbad0e6b28224bd0642@group.calendar.google.com',
   }
 
-  const DMLID = "1e1304c1e62c95e48b8222d2c588964dbcd94bb8f1445b134a9b4d9a6d31f23a@group.calendar.google.com";
+  const DMLID = "c_m9r7qdg8uvf7423qe3ph24cdd4@group.calendar.google.com";
 
   const [ currentEvents, setCurrentEvents ] = useState({
     "Local History Room": <div>Loading...</div>,
@@ -78,7 +78,6 @@ export const Calendar = () => {
   }
 
   var prevDate = window.localStorage.getItem("currentDate");
-  console.log(prevDate);
   
   const [ statsControl, setStatsControl ] = useState({
     startTime: `${today_year}-${today_month}-${today_day}`,
@@ -181,7 +180,6 @@ export const Calendar = () => {
       if (resp.error) {
         throw resp;
       }
-      console.log(gapi.client.getToken());
       const { access_token, expires_in } = gapi.client.getToken();
       window.localStorage.setItem("access_token", access_token);
       window.localStorage.setItem("expires_in", expires_in);
@@ -221,7 +219,6 @@ export const Calendar = () => {
   } 
 
   function parseDateTime(dateString) {
-    console.log(dateString);
     var hour = Number(dateString.slice(11, 13));
     var amPm = hour >= 12 ? "p.m." : "a.m.";
     hour = hour === 0 ? 12 : hour;
@@ -243,7 +240,6 @@ export const Calendar = () => {
       handleAuthClick();
       return;
     }
-    console.log(response);
     setInputControl({
       startTime: response.result.start.dateTime.slice(11, 16),
       endTime: response.result.end.dateTime.slice(11,16),
@@ -498,11 +494,7 @@ function confirmDelete(roomId, id) {
   async function updateDML() {    
     const dml_today = new Date().toLocaleDateString();
     var [ dml_month, dml_day, dml_year ] = dml_today.split("/");
-
-    const end_of_month_month = dml_month <= 11 ? dml_month + 1 : 1;
-    const end_of_month_day = dml_day <= 28 ? dml_day : 28;
-    const end_of_month_year = dml_month <= 11 ? dml_year : dml_year + 1;
-
+    
     if (today_day.length === 1) {
       today_day = "0" + today_day;
     }
@@ -512,14 +504,13 @@ function confirmDelete(roomId, id) {
     }
 
     let start = `${dml_year}-${dml_month}-${dml_day}T00:00:00.000-05:00`;
-    let end = `${end_of_month_year}-${end_of_month_month}-${end_of_month_day}T23:59:59.000-05:00`;
   
     let response;
     try {
       const request = {
         calendarId: DMLID,
         timeMin: start,
-        timeMax: end,
+        maxResults: 24,
         showDeleted: false,
         singleEvents: true,
         orderBy: "startTime",
@@ -540,7 +531,6 @@ function confirmDelete(roomId, id) {
     // Flatten to string to display
     const output = await events.map((event) => {
       var booked = false;
-      console.log(event.extendedProperties);
       if (event.extendedProperties && event.extendedProperties.private.booked === "true") {
         booked = true;
       }
@@ -752,7 +742,6 @@ function confirmDelete(roomId, id) {
   }
 
   var handleStatsStart = (e) => {
-    console.log(e.target.value);
     setStatsControl({
       ...statsControl,
       startTime: e.target.value,
