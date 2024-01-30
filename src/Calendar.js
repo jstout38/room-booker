@@ -648,7 +648,7 @@ function confirmDelete(roomId, id) {
       currentTime = "0" + currentTime;
     }
 
-    if (currentTime.slice(9,11) === 'PM') {
+    if (currentTime.slice(9,11) === 'PM'  && currentTime.slice(0,2) !== "12") {
     
       currentTime = (Number(currentTime.slice(0,2)) + 12).toString() + currentTime.slice(2);
     }
