@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.css": "/room-booker/static/css/main.54a41a1c.css",
-    "main.js": "/room-booker/static/js/main.0a6fd7ba.js",
+    "main.css": "/room-booker/static/css/main.ed6be27c.css",
+    "main.js": "/room-booker/static/js/main.24bf291f.js",
     "static/js/787.b94b3e6f.chunk.js": "/room-booker/static/js/787.b94b3e6f.chunk.js",
     "index.html": "/room-booker/index.html",
-    "main.54a41a1c.css.map": "/room-booker/static/css/main.54a41a1c.css.map",
-    "main.0a6fd7ba.js.map": "/room-booker/static/js/main.0a6fd7ba.js.map",
+    "main.ed6be27c.css.map": "/room-booker/static/css/main.ed6be27c.css.map",
+    "main.24bf291f.js.map": "/room-booker/static/js/main.24bf291f.js.map",
     "787.b94b3e6f.chunk.js.map": "/room-booker/static/js/787.b94b3e6f.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.54a41a1c.css",
-    "static/js/main.0a6fd7ba.js"
+    "static/css/main.ed6be27c.css",
+    "static/js/main.24bf291f.js"
   ]
 }
