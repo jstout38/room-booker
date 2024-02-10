@@ -792,16 +792,18 @@ function confirmDelete(roomId, id) {
       formatted: e.target.value,
     };
     setCurrentDate(newDate);
-    window.localStorage.setItem("currentDate", JSON.stringify(newDate));
+    window.localStorage.setItem("currentDate", JSON.stringify(newDate))
   }
 
   var setToday = () => {
-    setCurrentDate({
+    var newDate = {
       day: today_day,
       month: today_month,
       year: today_year,
       formatted: `${today_year}-${today_month}-${today_day}`,
-    });
+    };
+    setCurrentDate(newDate);
+    window.localStorage.setItem("currentDate", JSON.stringify(newDate))
   }
 
   const cancelDML = () => {
