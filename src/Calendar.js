@@ -795,6 +795,15 @@ function confirmDelete(roomId, id) {
     window.localStorage.setItem("currentDate", JSON.stringify(newDate));
   }
 
+  var setToday = () => {
+    setCurrentDate({
+      day: today_day,
+      month: today_month,
+      year: today_year,
+      formatted: `${today_year}-${today_month}-${today_day}`,
+    });
+  }
+
   const cancelDML = () => {
     setShowDML(false);
   }
@@ -820,6 +829,7 @@ function confirmDelete(roomId, id) {
         <div className={classNames("flex flex-row col-span-4 row-start-1 col-start-2 justify-center items-center text-black text-xl", {'hidden' : !accessToken})}>
           <label>Room reservations for </label>
           <input value={currentDate.formatted} onChange={handleChangeDate} type="date" className="m-3 text-black" />
+          <button onClick={setToday} className="bg-blue-800 p-1 text-white rounded">Today</button>
         </div>      
         <div className="flex flex-row col-span-1 col-start-6 justify-end items-center">
           <div className="p-2 m-1">
