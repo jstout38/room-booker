@@ -510,7 +510,7 @@ function confirmDelete(roomId, id) {
       const request = {
         calendarId: DMLID,
         timeMin: start,
-        maxResults: 24,
+        maxResults: 16,
         showDeleted: false,
         singleEvents: true,
         orderBy: "startTime",
